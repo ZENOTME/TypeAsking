@@ -129,37 +129,6 @@ The default request timeout is 60 seconds. `.with_http_client(client.clone())`
 lets you supply a custom connection pool. `.with_endpoint(url)` overrides the
 full request URL without changing the provider protocol.
 
-## Examples
-
-Run these from a checkout of the repository with the appropriate API key set:
-
-| Example | Command |
-| --- | --- |
-| [Boolean, choice, and score questions](https://github.com/ZENOTME/openasking/blob/main/examples/decisions.rs) via TypeSafe | `cargo run --example decisions -- --typesafe` |
-| The same questions via Vercel AI Gateway | `cargo run --example decisions` |
-| [Concurrent requests](https://github.com/ZENOTME/openasking/blob/main/examples/concurrent.rs) via Vercel AI Gateway | `cargo run --example concurrent` |
-
-The [latency](https://github.com/ZENOTME/openasking/blob/main/examples/latency.rs)
-and [provider comparison](https://github.com/ZENOTME/openasking/blob/main/examples/provider_latency.rs)
-examples make repeated live API calls to measure latency. See their source files
-for required keys and request counts.
-
-## Contributing
-
-Bug reports and pull requests are welcome on
-[GitHub](https://github.com/ZENOTME/openasking/issues). Include a minimal reproduction
-when reporting a problem.
-
-From a checkout, run the same checks as CI:
-
-```sh
-cargo test --locked
-cargo test --locked --features serde_json/arbitrary_precision
-```
-
-Tests use mock HTTP servers and do not require API credentials. To browse the
-full API documentation locally, run `cargo doc --no-deps --open`.
-
 ## License
 
 openasking is licensed under the [MIT License](https://github.com/ZENOTME/openasking/blob/main/LICENSE).
