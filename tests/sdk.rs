@@ -5,17 +5,21 @@ use std::{
     task::{Context, Poll, Waker},
     time::Duration,
 };
-use typeasking::{Asking, BoolQuestion, ChoiceQuestion, Error, ScoreQuestion};
+use typeasking::{Asking, BoolQuestion, ChoiceQuestion, Error, ScoreQuestion, VercelConfig};
 use wiremock::{
     Mock, MockServer, ResponseTemplate,
     matchers::{body_json, header, method, path},
 };
 
 fn request(server: &MockServer) -> Asking {
-    Asking::new()
-        .with_api_key("test-key")
-        .with_endpoint(format!("{}/evaluation-model", server.uri()))
-        .state("test state")
+    Asking::new(
+        VercelConfig::new()
+            .with_api_key("test-key")
+            // Each test owns a Tokio runtime; do not reuse connections from a dropped runtime.
+            .with_http_client(reqwest::Client::new())
+            .with_endpoint(format!("{}/evaluation-model", server.uri())),
+    )
+    .state("test state")
 }
 
 fn boolean() -> BoolQuestion {
@@ -29,60 +33,78 @@ fn first_poll(request: &mut Asking) -> Poll<Result<typeasking::Answers, Error>> 
 #[test]
 fn invalid_requests_fail_on_first_poll_without_runtime() {
     let cases = vec![
-        Asking::new(),
-        Asking::new().state("state"),
-        Asking::new().state("").bool_question(boolean()),
-        Asking::new().state("  ").bool_question(boolean()),
-        Asking::new().state(json!({})).bool_question(boolean()),
-        Asking::new().state(json!([])).bool_question(boolean()),
-        Asking::new().state(Value::Null).bool_question(boolean()),
-        Asking::new().state(42).bool_question(boolean()),
-        Asking::new().state(false).bool_question(boolean()),
-        Asking::new()
+        Asking::new(VercelConfig::new()),
+        Asking::new(VercelConfig::new()).state("state"),
+        Asking::new(VercelConfig::new())
+            .state("")
+            .bool_question(boolean()),
+        Asking::new(VercelConfig::new())
+            .state("  ")
+            .bool_question(boolean()),
+        Asking::new(VercelConfig::new())
+            .state(json!({}))
+            .bool_question(boolean()),
+        Asking::new(VercelConfig::new())
+            .state(json!([]))
+            .bool_question(boolean()),
+        Asking::new(VercelConfig::new())
+            .state(Value::Null)
+            .bool_question(boolean()),
+        Asking::new(VercelConfig::new())
+            .state(42)
+            .bool_question(boolean()),
+        Asking::new(VercelConfig::new())
+            .state(false)
+            .bool_question(boolean()),
+        Asking::new(VercelConfig::new().with_api_key(""))
             .state("state")
-            .bool_question(boolean())
-            .with_api_key(""),
-        Asking::new()
+            .bool_question(boolean()),
+        Asking::new(VercelConfig::new().with_api_key("bad\nkey"))
             .state("state")
-            .bool_question(boolean())
-            .with_api_key("bad\nkey"),
-        Asking::new()
+            .bool_question(boolean()),
+        Asking::new(VercelConfig::new())
             .state("state")
             .bool_question(boolean())
             .bool_question(boolean()),
-        Asking::new()
+        Asking::new(VercelConfig::new())
             .state("state")
             .bool_question(BoolQuestion::new("", "Q")),
-        Asking::new()
+        Asking::new(VercelConfig::new())
             .state("state")
             .bool_question(BoolQuestion::new("q", "")),
-        Asking::new()
+        Asking::new(VercelConfig::new())
             .state("state")
             .bool_question(boolean().when_true("")),
-        Asking::new()
+        Asking::new(VercelConfig::new())
             .state("state")
             .choice_question(ChoiceQuestion::new("q", "Q")),
-        Asking::new().state("state").choice_question(
-            ChoiceQuestion::new("q", "Q")
-                .option("a", "A")
-                .option("a", "B"),
-        ),
-        Asking::new()
+        Asking::new(VercelConfig::new())
+            .state("state")
+            .choice_question(
+                ChoiceQuestion::new("q", "Q")
+                    .option("a", "A")
+                    .option("a", "B"),
+            ),
+        Asking::new(VercelConfig::new())
             .state("state")
             .score_question(ScoreQuestion::new("q", "Q").level("low")),
-        Asking::new()
+        Asking::new(VercelConfig::new())
             .state("state")
             .score_question(ScoreQuestion::new("q", "Q").level("low").level("")),
-        Asking::new()
-            .state("state")
-            .bool_question(boolean())
-            .with_api_key("k")
-            .with_endpoint("ftp://example.com"),
-        Asking::new()
-            .state("state")
-            .bool_question(boolean())
-            .with_api_key("k")
-            .with_timeout(Duration::ZERO),
+        Asking::new(
+            VercelConfig::new()
+                .with_api_key("k")
+                .with_endpoint("ftp://example.com"),
+        )
+        .state("state")
+        .bool_question(boolean()),
+        Asking::new(
+            VercelConfig::new()
+                .with_api_key("k")
+                .with_timeout(Duration::ZERO),
+        )
+        .state("state")
+        .bool_question(boolean()),
     ];
     for mut request in cases {
         assert!(matches!(
@@ -104,7 +126,9 @@ fn serialization_errors_are_deferred() {
             Err(serde::ser::Error::custom("cannot serialize"))
         }
     }
-    let mut request = Asking::new().state(BadState).bool_question(boolean());
+    let mut request = Asking::new(VercelConfig::new())
+        .state(BadState)
+        .bool_question(boolean());
     assert!(matches!(
         first_poll(&mut request),
         Poll::Ready(Err(Error::StateSerialization(_)))
@@ -374,7 +398,11 @@ async fn invalid_choices_and_scores_are_rejected() {
         } else {
             r.score_question(ScoreQuestion::new("q", "Q").level("low").level("high"))
         };
-        assert!(matches!(r.await, Err(Error::InvalidResponse(_))));
+        let result = r.await;
+        assert!(
+            matches!(result, Err(Error::InvalidResponse(_))),
+            "answer {answer}: {result:?}"
+        );
     }
 }
 
@@ -394,11 +422,16 @@ async fn http_errors_and_timeout() {
         .respond_with(ResponseTemplate::new(200).set_delay(Duration::from_secs(5)))
         .mount(&server)
         .await;
-    let error = request(&server)
-        .with_timeout(Duration::from_millis(50))
-        .bool_question(boolean())
-        .await
-        .unwrap_err();
+    let error = Asking::new(
+        VercelConfig::new()
+            .with_api_key("test-key")
+            .with_endpoint(server.uri())
+            .with_timeout(Duration::from_millis(50)),
+    )
+    .state("state")
+    .bool_question(boolean())
+    .await
+    .unwrap_err();
     assert!(matches!(error, Error::Transport(e) if e.is_timeout()));
 }
 
@@ -424,13 +457,11 @@ fn environment_credentials() {
                     .mount(&server)
                     .await;
             }
-            let mut r = Asking::new()
-                .state("state")
-                .bool_question(boolean())
-                .with_endpoint(server.uri());
+            let mut config = VercelConfig::new().with_endpoint(server.uri());
             if mode == "override" || mode == "explicit" {
-                r = r.with_api_key("explicit-key");
+                config = config.with_api_key("explicit-key");
             }
+            let r = Asking::new(config).state("state").bool_question(boolean());
             if mode == "missing" {
                 assert!(matches!(r.await, Err(Error::Configuration(_))));
             } else {

@@ -1,12 +1,12 @@
-use typeasking::{Asking, BoolQuestion};
+use typeasking::{Asking, BoolQuestion, VercelConfig};
 
 #[tokio::main]
 async fn main() -> Result<(), typeasking::Error> {
     let question = BoolQuestion::new("passed", "Did the build pass?");
-    let a = Asking::new()
+    let a = Asking::new(VercelConfig::new())
         .state("Build succeeded, exit 0")
         .bool_question(question.clone());
-    let b = Asking::new()
+    let b = Asking::new(VercelConfig::new())
         .state("Build failed, exit 1")
         .bool_question(question);
     let (a, b) = tokio::try_join!(a, b)?;

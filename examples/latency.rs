@@ -1,12 +1,12 @@
 //! Live latency comparison. Makes 3 warmup + 8 requests per round (paid API calls).
 //! Run with AI_GATEWAY_API_KEY set: cargo run --example latency -- 3
 use std::time::Instant;
-use typeasking::{Asking, BoolQuestion, ChoiceQuestion, Error, ScoreQuestion};
+use typeasking::{Asking, BoolQuestion, ChoiceQuestion, Error, ScoreQuestion, VercelConfig};
 
 const STATE: &str = "A customer was charged twice for one order and requests a refund. The service is otherwise working.";
 
 fn base() -> Asking {
-    Asking::new().state(STATE)
+    Asking::new(VercelConfig::new()).state(STATE)
 }
 fn boolean() -> BoolQuestion {
     BoolQuestion::new("refund", "Does the customer request a refund?")

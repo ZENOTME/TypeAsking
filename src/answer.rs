@@ -75,6 +75,8 @@ pub struct Answers {
     ///
     /// Optional TypeSafe confidence is retained here (typically under
     /// `typesafe.confidence`), separate from probabilities and never synthesized.
+    /// Direct TypeSafe responses also retain the resolved model under
+    /// `typesafe.model` and per-question level labels under `typesafe.legend`.
     pub metadata: Value,
     /// Token usage, when reported. Missing counts are not treated as zero.
     pub usage: Option<Usage>,

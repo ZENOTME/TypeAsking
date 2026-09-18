@@ -1,8 +1,15 @@
-use typeasking::{Asking, BoolQuestion, ChoiceQuestion, ScoreQuestion};
+use typeasking::{
+    Asking, BoolQuestion, ChoiceQuestion, Config, ScoreQuestion, TypeSafeConfig, VercelConfig,
+};
 
 #[tokio::main]
 async fn main() -> Result<(), typeasking::Error> {
-    let answers = Asking::new()
+    let config: Config = if std::env::args().any(|a| a == "--typesafe") {
+        TypeSafeConfig::new().into()
+    } else {
+        VercelConfig::new().into()
+    };
+    let answers = Asking::new(config)
         .state(
             serde_json::json!({"event": "The customer was charged twice and requests a refund."}),
         )
