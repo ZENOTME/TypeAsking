@@ -2,21 +2,24 @@
 
 [![Docs](https://img.shields.io/docsrs/openasking?label=docs)](https://docs.rs/openasking/latest/openasking/)
 
-openasking is a Rust SDK that turns context into probabilities, choices, and scores
-using TypeSafe's Jev model. Provide context, define your questions, and await the
-answers through either the TypeSafe API or Vercel AI Gateway.
+openasking is an async Rust SDK for TypeSafe's Jev model, with support for the
+direct TypeSafe API and Vercel AI Gateway. Send context and questions to Jev, then
+await Boolean probabilities, choices from named options, and scores on an ordered
+rubric.
 
 For example, given a customer support message, you can ask whether the customer
 wants a refund, which team should handle it, and how urgent it is—all in one request.
+
+[Crate](https://crates.io/crates/openasking) · [API documentation](https://docs.rs/openasking/latest/openasking/)
 
 ## Quick start
 
 ### 1. Add dependencies
 
-Add openasking from this repository and Tokio for the async runtime:
+Add openasking and Tokio for the async runtime:
 
 ```sh
-cargo add openasking --git https://github.com/ZENOTME/openasking.git
+cargo add openasking@0.1
 cargo add tokio --features macros,rt-multi-thread
 ```
 
