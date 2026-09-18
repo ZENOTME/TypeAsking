@@ -57,3 +57,5 @@ The default HTTP pool is shared. `.with_http_client(client.clone())` allows a
 custom pool; `.with_timeout(Duration)` changes the 60-second request timeout.
 Dropping a future cancels local work but does not guarantee cancellation of an
 already accepted server request. There are no automatic retries or background tasks.
+
+Licensed under the [MIT License](https://github.com/ZENOTME/TypeAsking/blob/main/LICENSE).
