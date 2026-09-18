@@ -2,7 +2,7 @@
 
 [![Docs](https://img.shields.io/docsrs/openasking?label=docs)](https://docs.rs/openasking/latest/openasking/)
 
-openasking is an async Rust SDK for TypeSafe's Jev model, with support for the
+openasking is a Rust SDK for TypeSafe's Jev model, with support for the
 direct TypeSafe API and Vercel AI Gateway. Send context and questions to Jev, then
 await Boolean probabilities, choices from named options, and scores on an ordered
 rubric.
