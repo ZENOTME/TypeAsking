@@ -5,6 +5,16 @@ use serde_json::{Value, json};
 use crate::Error;
 
 /// A question estimating P(true). Criteria are optional.
+///
+/// The result is [`crate::BoolAnswer`]; callers choose their own decision threshold.
+///
+/// ```
+/// use typeasking::BoolQuestion;
+///
+/// let safe = BoolQuestion::new("safe", "Is the operation safe?")
+///     .when_true("Read-only access")
+///     .when_false("Data is modified or deleted");
+/// ```
 #[derive(Clone, Debug)]
 pub struct BoolQuestion {
     pub(crate) id: String,
@@ -14,6 +24,11 @@ pub struct BoolQuestion {
 }
 
 impl BoolQuestion {
+    /// Create a Boolean question with a stable ID and instructions.
+    ///
+    /// ID and instructions must not be empty or whitespace-only. The ID must be
+    /// unique within the request and is used to retrieve the answer. Validation
+    /// is deferred until the containing [`crate::Asking`] is first polled.
     pub fn new(id: impl Into<String>, instructions: impl Into<String>) -> Self {
         Self {
             id: id.into(),
@@ -23,11 +38,17 @@ impl BoolQuestion {
         }
     }
 
+    /// Describe what counts as true. Calling again replaces the previous criterion.
+    ///
+    /// Optional; when supplied, the description must not be blank.
     pub fn when_true(mut self, description: impl Into<String>) -> Self {
         self.when_true = Some(description.into());
         self
     }
 
+    /// Describe what counts as false. Calling again replaces the previous criterion.
+    ///
+    /// Optional; when supplied, the description must not be blank.
     pub fn when_false(mut self, description: impl Into<String>) -> Self {
         self.when_false = Some(description.into());
         self
@@ -35,6 +56,16 @@ impl BoolQuestion {
 }
 
 /// A single choice among named options. Keys must be unique and nonempty.
+///
+/// Use several Boolean questions when multiple options may independently apply.
+///
+/// ```
+/// use typeasking::ChoiceQuestion;
+///
+/// let route = ChoiceQuestion::new("route", "What should happen next?")
+///     .option("continue", "Continue execution")
+///     .option("retry", "Retry a transient error");
+/// ```
 #[derive(Clone, Debug)]
 pub struct ChoiceQuestion {
     pub(crate) id: String,
@@ -43,6 +74,11 @@ pub struct ChoiceQuestion {
 }
 
 impl ChoiceQuestion {
+    /// Create a choice question with no options yet.
+    ///
+    /// ID and instructions must not be empty or whitespace-only. The ID must be
+    /// unique within the request and is used to retrieve the answer. Validation
+    /// is deferred until the containing [`crate::Asking`] is first polled.
     pub fn new(id: impl Into<String>, instructions: impl Into<String>) -> Self {
         Self {
             id: id.into(),
@@ -51,6 +87,12 @@ impl ChoiceQuestion {
         }
     }
 
+    /// Append an option with a stable key and its meaning.
+    ///
+    /// At least one option is required. Keys must be unique within this question;
+    /// both key and description must not be blank. Duplicate keys produce a
+    /// configuration error on poll rather than replacing an earlier option.
+    /// The selected key is returned unchanged in [`crate::ChoiceAnswer::choice`].
     pub fn option(mut self, key: impl Into<String>, description: impl Into<String>) -> Self {
         self.options.push((key.into(), description.into()));
         self
@@ -58,6 +100,18 @@ impl ChoiceQuestion {
 }
 
 /// A fractional score on ordered levels, from 0 to `levels.len() - 1`.
+///
+/// Levels describe an ordered rubric, not arbitrary numerical endpoints.
+///
+/// ```
+/// use typeasking::ScoreQuestion;
+///
+/// let quality = ScoreQuestion::new("quality", "Assess code quality")
+///     .level("poor: contains bugs")
+///     .level("fair: correct but untested")
+///     .level("good: correct and tested");
+/// // The resulting score can be 1.7 on this 0..=2 scale.
+/// ```
 #[derive(Clone, Debug)]
 pub struct ScoreQuestion {
     pub(crate) id: String,
@@ -66,6 +120,11 @@ pub struct ScoreQuestion {
 }
 
 impl ScoreQuestion {
+    /// Create a score question with no levels yet.
+    ///
+    /// ID and instructions must not be empty or whitespace-only. The ID must be
+    /// unique within the request and is used to retrieve the answer. Validation
+    /// is deferred until the containing [`crate::Asking`] is first polled.
     pub fn new(id: impl Into<String>, instructions: impl Into<String>) -> Self {
         Self {
             id: id.into(),
@@ -75,6 +134,9 @@ impl ScoreQuestion {
     }
 
     /// Append a level, ordered from lowest to highest. At least two are required.
+    ///
+    /// Descriptions must not be blank. Levels receive indexes starting at zero;
+    /// three levels define scores in `[0, 2]`, including fractional values.
     pub fn level(mut self, description: impl Into<String>) -> Self {
         self.levels.push(description.into());
         self

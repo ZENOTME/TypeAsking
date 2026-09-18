@@ -5,23 +5,33 @@ use serde_json::Value;
 
 use crate::{Error, question::Question};
 
+/// The probability of the true outcome for a Boolean question.
 #[derive(Debug, Clone, PartialEq)]
 pub struct BoolAnswer {
     /// Model-estimated P(true), not confidence in whichever outcome was selected.
     pub probability_true: f64,
 }
 
+/// A selected option key and, when available, its full probability distribution.
 #[derive(Debug, Clone, PartialEq)]
 pub struct ChoiceAnswer {
+    /// Selected key, matching an option declared by the original question.
     pub choice: String,
-    /// Empty if the provider omitted the distribution.
+    /// Probability of each declared option, in `[0, 1]`.
+    ///
+    /// Empty if omitted by the provider; absence does not mean zero probability.
     pub probabilities: HashMap<String, f64>,
 }
 
+/// A fractional rubric score and optional distribution over ordered levels.
 #[derive(Debug, Clone, PartialEq)]
 pub struct ScoreAnswer {
+    /// Position in `[0, number of levels - 1]`; it need not be an integer.
     pub score: f64,
-    /// In level order, including indexes >= 10. Empty if omitted by the provider.
+    /// Probabilities in the original level order, indexed numerically from zero.
+    ///
+    /// Empty if omitted by the provider. Otherwise includes every level; values
+    /// are in `[0, 1]` and sum to one within the provider's declared rounding.
     pub probabilities: Vec<f64>,
 }
 
@@ -43,23 +53,52 @@ impl Answer {
 }
 
 /// All answers to one request, indexed by the original question IDs.
+///
+/// Obtain this value by awaiting [`crate::Asking`]. Accessors borrow the stored
+/// answers without cloning them. Successful requests contain one answer per ID.
+///
+/// ```no_run
+/// use typeasking::{Answers, Error};
+///
+/// fn inspect(answers: &Answers) -> Result<(), Error> {
+///     let safe = answers.bool_answer("safe")?;
+///     let route = answers.choice_answer("route")?;
+///     let quality = answers.score_answer("quality")?;
+///     println!("{} {} {}", safe.probability_true, route.choice, quality.score);
+///     Ok(())
+/// }
+/// ```
 #[derive(Debug, Clone)]
 pub struct Answers {
     answers: HashMap<String, Answer>,
-    /// Provider metadata, including optional TypeSafe confidence. Never synthesized.
+    /// Provider metadata, or JSON null if none was supplied.
+    ///
+    /// Optional TypeSafe confidence is retained here (typically under
+    /// `typesafe.confidence`), separate from probabilities and never synthesized.
     pub metadata: Value,
+    /// Token usage, when reported. Missing counts are not treated as zero.
     pub usage: Option<Usage>,
+    /// Provider warnings preserved as JSON objects; empty when none are reported.
     pub warnings: Vec<Value>,
 }
 
+/// Provider-reported token counts. Each count can be independently absent.
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Usage {
+    /// Number of input tokens, or None if not reported.
     pub input_tokens: Option<u64>,
+    /// Number of output tokens, or None if not reported.
     pub output_tokens: Option<u64>,
 }
 
 impl Answers {
+    /// Borrow the Boolean answer identified by its original question ID.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Error::NotFound`] if the ID is absent, or
+    /// [`Error::TypeMismatch`] if it belongs to a different question type.
     pub fn bool_answer(&self, id: &str) -> Result<&BoolAnswer, Error> {
         match self.get(id)? {
             Answer::Bool(a) => Ok(a),
@@ -67,6 +106,12 @@ impl Answers {
         }
     }
 
+    /// Borrow the choice answer identified by its original question ID.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Error::NotFound`] if the ID is absent, or
+    /// [`Error::TypeMismatch`] if it belongs to a different question type.
     pub fn choice_answer(&self, id: &str) -> Result<&ChoiceAnswer, Error> {
         match self.get(id)? {
             Answer::Choice(a) => Ok(a),
@@ -74,6 +119,12 @@ impl Answers {
         }
     }
 
+    /// Borrow the score answer identified by its original question ID.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Error::NotFound`] if the ID is absent, or
+    /// [`Error::TypeMismatch`] if it belongs to a different question type.
     pub fn score_answer(&self, id: &str) -> Result<&ScoreAnswer, Error> {
         match self.get(id)? {
             Answer::Score(a) => Ok(a),

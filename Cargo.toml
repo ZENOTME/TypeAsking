@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2024"
 description = "Typed, awaitable Jev evaluation requests for Rust"
 readme = "README.md"
+license = "MIT"
 
 [dependencies]
 reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
