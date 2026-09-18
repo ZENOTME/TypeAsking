@@ -153,16 +153,16 @@ fn mismatch(id: &str, expected: &'static str, answer: &Answer) -> Error {
 #[serde(tag = "type")]
 enum WireAnswer {
     #[serde(rename = "boolean")]
-    Bool { probability: f64 },
+    Bool { probability: serde_json::Number },
     #[serde(rename = "choice")]
     Choice {
         choice: String,
-        probabilities: Option<HashMap<String, f64>>,
+        probabilities: Option<HashMap<String, serde_json::Number>>,
     },
     #[serde(rename = "score")]
     Score {
-        score: f64,
-        probabilities: Option<HashMap<String, f64>>,
+        score: serde_json::Number,
+        probabilities: Option<HashMap<String, serde_json::Number>>,
     },
 }
 
@@ -229,6 +229,7 @@ impl WireResponse {
                 .ok_or_else(|| invalid("missing requested answer"))?;
             let answer = match (question, wire) {
                 (Question::Bool(_), WireAnswer::Bool { probability: p }) => {
+                    let p = finite_number(&p)?;
                     probability(p)?;
                     Answer::Bool(BoolAnswer {
                         probability_true: p,
@@ -241,6 +242,7 @@ impl WireResponse {
                         probabilities,
                     },
                 ) => {
+                    let probabilities = probabilities.map(convert_distribution).transpose()?;
                     if !q.options.iter().any(|(key, _)| key == &choice) {
                         return Err(invalid("choice is not a declared option"));
                     }
@@ -269,6 +271,8 @@ impl WireResponse {
                         probabilities,
                     },
                 ) => {
+                    let score = finite_number(&score)?;
+                    let probabilities = probabilities.map(convert_distribution).transpose()?;
                     if !score.is_finite() || score < 0.0 || score > (q.levels.len() - 1) as f64 {
                         return Err(invalid("score is outside the declared scale"));
                     }
@@ -308,4 +312,23 @@ impl WireResponse {
             warnings: self.warnings,
         })
     }
+}
+
+// Keep JSON numbers in the wire representation so internally tagged enums
+// remain compatible with serde_json/arbitrary_precision, including exponents.
+// Convert only at the boundary to the public f64-based answer types.
+pub(crate) fn finite_number(number: &serde_json::Number) -> Result<f64, Error> {
+    number
+        .as_f64()
+        .filter(|value| value.is_finite())
+        .ok_or_else(|| invalid("answer number is not representable as a finite f64"))
+}
+
+fn convert_distribution(
+    values: HashMap<String, serde_json::Number>,
+) -> Result<HashMap<String, f64>, Error> {
+    values
+        .into_iter()
+        .map(|(key, value)| Ok((key, finite_number(&value)?)))
+        .collect()
 }

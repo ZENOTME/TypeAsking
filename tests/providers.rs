@@ -250,3 +250,128 @@ fn typesafe_environment_credentials() {
         );
     }
 }
+
+// Run with and without `--features serde_json/arbitrary_precision`.
+// Raw bodies preserve decimal/exponent spelling all the way into the HTTP decoder.
+#[tokio::test]
+async fn numeric_answers_survive_dependency_feature_unification() {
+    let cases = [
+        ("0.12", "0.02", "0.86", "0.75", "1.74", 0.86, 0.75, 1.74),
+        (
+            "12e-2", "2e-2", "86e-2", "75e-2", "174e-2", 0.86, 0.75, 1.74,
+        ),
+        ("0", "0", "1", "1", "2", 1.0, 1.0, 2.0),
+    ];
+    for native in [false, true] {
+        let client = reqwest::Client::new();
+        for (low, medium, high, probability, score, expected_high, expected_bool, expected_score) in
+            cases
+        {
+            let server = MockServer::start().await;
+            let (bool_type, bool_field, usage) = if native {
+                ("noul", "noul", r#""input_tokens":10,"output_tokens":20"#)
+            } else {
+                (
+                    "boolean",
+                    "probability",
+                    r#""inputTokens":10,"outputTokens":20"#,
+                )
+            };
+            let body = format!(
+                r#"{{"model":"jev-test","usage":{{{usage}}},"answers":{{
+                "safe":{{"type":"{bool_type}","{bool_field}":{probability}}},
+                "route":{{"type":"choice","choice":"high","probabilities":{{"low":{low},"medium":{medium},"high":{high}}},"confidence":0.8}},
+                "quality":{{"type":"score","score":{score},"probabilities":{{"0":{low},"1":{medium},"2":{high}}},"confidence":0.8,"legend":{{"0":"poor","1":"fair","2":"good"}}}}
+            }}}}"#
+            );
+            Mock::given(method("POST"))
+                .respond_with(ResponseTemplate::new(200).set_body_raw(body, "application/json"))
+                .expect(1)
+                .mount(&server)
+                .await;
+            let config: Config = if native {
+                TypeSafeConfig::new()
+                    .with_api_key("test")
+                    .with_endpoint(server.uri())
+                    .with_http_client(client.clone())
+                    .into()
+            } else {
+                VercelConfig::new()
+                    .with_api_key("test")
+                    .with_endpoint(server.uri())
+                    .with_http_client(client.clone())
+                    .into()
+            };
+            let answers = Asking::new(config)
+                .state("Choose effort")
+                .bool_question(BoolQuestion::new("safe", "Safe?"))
+                .choice_question(
+                    ChoiceQuestion::new("route", "Effort?")
+                        .option("low", "Low")
+                        .option("medium", "Medium")
+                        .option("high", "High"),
+                )
+                .score_question(
+                    ScoreQuestion::new("quality", "Quality?")
+                        .level("poor")
+                        .level("fair")
+                        .level("good"),
+                )
+                .await
+                .unwrap_or_else(|e| panic!("native={native}, high={high}: {e:?}"));
+            assert_eq!(
+                answers.bool_answer("safe").unwrap().probability_true,
+                expected_bool
+            );
+            let route = answers.choice_answer("route").unwrap();
+            assert_eq!(route.choice, "high");
+            assert_eq!(route.probabilities["high"], expected_high);
+            assert_eq!(
+                answers.score_answer("quality").unwrap().score,
+                expected_score
+            );
+            assert_eq!(answers.usage.unwrap().input_tokens, Some(10));
+        }
+    }
+}
+
+#[tokio::test]
+async fn invalid_wire_numbers_are_rejected() {
+    for native in [false, true] {
+        for bad in ["1e400", "\"0.86\""] {
+            let server = MockServer::start().await;
+            let body = if native {
+                format!(
+                    r#"{{"model":"jev-test","usage":{{"input_tokens":1,"output_tokens":1}},"answers":{{"safe":{{"type":"noul","noul":{bad}}}}}}}"#
+                )
+            } else {
+                format!(r#"{{"answers":{{"safe":{{"type":"boolean","probability":{bad}}}}}}}"#)
+            };
+            Mock::given(method("POST"))
+                .respond_with(ResponseTemplate::new(200).set_body_raw(body, "application/json"))
+                .mount(&server)
+                .await;
+            let config: Config = if native {
+                TypeSafeConfig::new()
+                    .with_api_key("test")
+                    .with_endpoint(server.uri())
+                    .with_http_client(reqwest::Client::new())
+                    .into()
+            } else {
+                VercelConfig::new()
+                    .with_api_key("test")
+                    .with_endpoint(server.uri())
+                    .with_http_client(reqwest::Client::new())
+                    .into()
+            };
+            let result = Asking::new(config)
+                .state("test")
+                .bool_question(BoolQuestion::new("safe", "Safe?"))
+                .await;
+            assert!(
+                matches!(result, Err(Error::InvalidResponse(_))),
+                "{result:?}"
+            );
+        }
+    }
+}

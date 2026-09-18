@@ -19,17 +19,17 @@ struct Usage {
 #[serde(tag = "type", rename_all = "lowercase")]
 enum Answer {
     Noul {
-        noul: f64,
+        noul: serde_json::Number,
     },
     Choice {
         choice: String,
-        probabilities: HashMap<String, f64>,
-        confidence: f64,
+        probabilities: HashMap<String, serde_json::Number>,
+        confidence: serde_json::Number,
     },
     Score {
-        score: f64,
-        probabilities: HashMap<String, f64>,
-        confidence: f64,
+        score: serde_json::Number,
+        probabilities: HashMap<String, serde_json::Number>,
+        confidence: serde_json::Number,
         legend: HashMap<String, String>,
     },
 }
@@ -73,6 +73,7 @@ pub(crate) fn decode(bytes: &[u8]) -> Result<WireResponse, Error> {
             }
         };
         if let Some(c) = certainty {
+            let c = crate::answer::finite_number(&c)?;
             if !c.is_finite() || !(0.0..=1.0).contains(&c) {
                 return Err(Error::InvalidResponse(
                     "TypeSafe confidence must be between 0 and 1".into(),
