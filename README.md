@@ -1,5 +1,7 @@
 # openasking
 
+[![Docs](https://img.shields.io/docsrs/openasking?label=docs)](https://docs.rs/openasking/latest/openasking/)
+
 openasking is a Rust SDK that turns context into probabilities, choices, and scores
 using TypeSafe's Jev model. Provide context, define your questions, and await the
 answers through either the TypeSafe API or Vercel AI Gateway.
