@@ -110,9 +110,7 @@ Both configurations accept the same customization methods:
 use std::time::Duration;
 use openasking::VercelConfig;
 
-let config = VercelConfig::new()
-    .with_model("typesafe-ai/jev")
-    .with_timeout(Duration::from_secs(30));
+let config = VercelConfig::new().with_timeout(Duration::from_secs(30));
 ```
 
 `new()` and `default()` read the process environment when the configuration is
