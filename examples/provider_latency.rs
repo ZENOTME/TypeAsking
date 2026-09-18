@@ -1,7 +1,7 @@
 //! Compare live provider latency with identical mixed questions.
 //! Requires TYPESAFE_API_KEY and AI_GATEWAY_API_KEY. Makes 2 + 2 * rounds requests.
 use std::time::{Duration, Instant};
-use typeasking::{
+use openasking::{
     Asking, BoolQuestion, ChoiceQuestion, Config, ScoreQuestion, TypeSafeConfig, VercelConfig,
 };
 

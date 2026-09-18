@@ -1,9 +1,9 @@
-use typeasking::{
+use openasking::{
     Asking, BoolQuestion, ChoiceQuestion, Config, ScoreQuestion, TypeSafeConfig, VercelConfig,
 };
 
 #[tokio::main]
-async fn main() -> Result<(), typeasking::Error> {
+async fn main() -> Result<(), openasking::Error> {
     let config: Config = if std::env::args().any(|a| a == "--typesafe") {
         TypeSafeConfig::new().into()
     } else {

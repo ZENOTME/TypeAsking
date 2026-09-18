@@ -1,7 +1,7 @@
-use typeasking::{Asking, BoolQuestion, VercelConfig};
+use openasking::{Asking, BoolQuestion, VercelConfig};
 
 #[tokio::main]
-async fn main() -> Result<(), typeasking::Error> {
+async fn main() -> Result<(), openasking::Error> {
     let question = BoolQuestion::new("passed", "Did the build pass?");
     let a = Asking::new(VercelConfig::new())
         .state("Build succeeded, exit 0")

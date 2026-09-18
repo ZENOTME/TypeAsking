@@ -5,7 +5,7 @@ use std::{
     task::{Context, Poll, Waker},
     time::Duration,
 };
-use typeasking::{
+use openasking::{
     Asking, BoolQuestion, ChoiceQuestion, Config, Error, ScoreQuestion, TypeSafeConfig,
     VercelConfig,
 };
@@ -215,7 +215,7 @@ fn provider_validation_is_deferred_to_poll() {
 
 #[test]
 fn typesafe_environment_credentials() {
-    if let Ok(mode) = std::env::var("TYPEASKING_NATIVE_ENV_TEST") {
+    if let Ok(mode) = std::env::var("OPENASKING_NATIVE_ENV_TEST") {
         tokio::runtime::Runtime::new().unwrap().block_on(async {
             let server=MockServer::start().await;
             let key=if mode=="env" {"Bearer native-env"} else {"Bearer explicit"};
@@ -235,7 +235,7 @@ fn typesafe_environment_credentials() {
     for mode in ["env", "override", "explicit", "missing"] {
         let mut cmd = std::process::Command::new(std::env::current_exe().unwrap());
         cmd.args(["--exact", "typesafe_environment_credentials"])
-            .env("TYPEASKING_NATIVE_ENV_TEST", mode)
+            .env("OPENASKING_NATIVE_ENV_TEST", mode)
             .env_remove("TYPESAFE_API_KEY")
             .env("AI_GATEWAY_API_KEY", "wrong-provider-key");
         if mode == "env" || mode == "override" {

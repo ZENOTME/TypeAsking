@@ -5,7 +5,7 @@ use std::{
     task::{Context, Poll, Waker},
     time::Duration,
 };
-use typeasking::{Asking, BoolQuestion, ChoiceQuestion, Error, ScoreQuestion, VercelConfig};
+use openasking::{Asking, BoolQuestion, ChoiceQuestion, Error, ScoreQuestion, VercelConfig};
 use wiremock::{
     Mock, MockServer, ResponseTemplate,
     matchers::{body_json, header, method, path},
@@ -26,7 +26,7 @@ fn boolean() -> BoolQuestion {
     BoolQuestion::new("safe", "Is it safe?")
 }
 
-fn first_poll(request: &mut Asking) -> Poll<Result<typeasking::Answers, Error>> {
+fn first_poll(request: &mut Asking) -> Poll<Result<openasking::Answers, Error>> {
     Pin::new(request).poll(&mut Context::from_waker(Waker::noop()))
 }
 

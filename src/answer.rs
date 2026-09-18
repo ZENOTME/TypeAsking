@@ -58,7 +58,7 @@ impl Answer {
 /// answers without cloning them. Successful requests contain one answer per ID.
 ///
 /// ```no_run
-/// use typeasking::{Answers, Error};
+/// use openasking::{Answers, Error};
 ///
 /// fn inspect(answers: &Answers) -> Result<(), Error> {
 ///     let safe = answers.bool_answer("safe")?;

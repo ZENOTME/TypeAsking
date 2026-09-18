@@ -48,7 +48,7 @@ use std::{
 /// # Examples
 ///
 /// ```no_run
-/// use typeasking::{Asking, BoolQuestion, Error, VercelConfig};
+/// use openasking::{Asking, BoolQuestion, Error, VercelConfig};
 ///
 /// async fn check() -> Result<f64, Error> {
 ///     let answers = Asking::new(VercelConfig::new())
@@ -86,7 +86,7 @@ impl Asking {
     /// happens until polling. Reuse the configuration for concurrent requests.
     ///
     /// ```
-    /// use typeasking::{Asking, TypeSafeConfig, BoolQuestion};
+    /// use openasking::{Asking, TypeSafeConfig, BoolQuestion};
     ///
     /// let config = TypeSafeConfig::new();
     /// let first = Asking::new(&config).state("Build passed")

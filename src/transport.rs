@@ -116,7 +116,7 @@ pub(crate) fn prepare(mut request: Request) -> Result<ResponseFuture, Error> {
             .headers(headers)
             .header(
                 "user-agent",
-                concat!("typeasking/", env!("CARGO_PKG_VERSION")),
+                concat!("openasking/", env!("CARGO_PKG_VERSION")),
             )
             .timeout(options.timeout)
             .json(&body)

@@ -9,7 +9,7 @@ use crate::Error;
 /// The result is [`crate::BoolAnswer`]; callers choose their own decision threshold.
 ///
 /// ```
-/// use typeasking::BoolQuestion;
+/// use openasking::BoolQuestion;
 ///
 /// let safe = BoolQuestion::new("safe", "Is the operation safe?")
 ///     .when_true("Read-only access")
@@ -60,7 +60,7 @@ impl BoolQuestion {
 /// Use several Boolean questions when multiple options may independently apply.
 ///
 /// ```
-/// use typeasking::ChoiceQuestion;
+/// use openasking::ChoiceQuestion;
 ///
 /// let route = ChoiceQuestion::new("route", "What should happen next?")
 ///     .option("continue", "Continue execution")
@@ -104,7 +104,7 @@ impl ChoiceQuestion {
 /// Levels describe an ordered rubric, not arbitrary numerical endpoints.
 ///
 /// ```
-/// use typeasking::ScoreQuestion;
+/// use openasking::ScoreQuestion;
 ///
 /// let quality = ScoreQuestion::new("quality", "Assess code quality")
 ///     .level("poor: contains bugs")
